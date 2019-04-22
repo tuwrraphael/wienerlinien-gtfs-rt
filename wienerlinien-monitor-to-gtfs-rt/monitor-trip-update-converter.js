@@ -19,13 +19,13 @@ class MonitorTripUpdateConverter {
                 if (!line.departures.departure) {
                     continue;
                 }
-                for (let departure of line.departures.departure) {
-                    var info = await this.findTripStopFromMonitorInfo(departure, line, monitor);
-                    if (null != info) {
+                var res = await this.findTripStopFromMonitorInfo(line.departures.departure, line, monitor);
+                if (null != res) {
+                    for (let info of res) {
                         tripStops.push({
                             trip_id: info.trip_id,
                             stop_id: info.stop_id,
-                            departure: departure,
+                            departure: info.departure,
                             line: line,
                             monitor: monitor
                         });

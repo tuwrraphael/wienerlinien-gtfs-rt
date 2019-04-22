@@ -1,10 +1,10 @@
 const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
 const express = require('express');
 const app = express();
-const expressWs = require('express-ws')(app);
 const fetch = require('node-fetch');
 const MonitorTripUpdateConverter = require("../wienerlinien-monitor-to-gtfs-rt");
 const OTPMonitorTripStopFinder = require("./OTPMonitorTripStopFinder");
+const WebSocket = require('ws');
 
 const APIKEY = "";
 const OTPInstance = "http://smallvm.westeurope.cloudapp.azure.com:3001";
@@ -59,14 +59,14 @@ app.post('/monitor', async (req, res, next) => {
   }
 });
 
+app.listen(3002);
 
+const wss = new WebSocket.Server({ port: 3003 });
 
-app.ws('/', function (ws, req) {
-  ws.on("close", () => connections.splice(connections.indexOf(ws), 1));
-  ws.on('message', function (msg) {
-    console.log(msg);
+wss.on('connection', function connection(ws) {
+  ws.on('message', function incoming(message) {
+    console.log('received: %s', message);
   });
+  ws.on('error', () => connections.splice(connections.indexOf(ws), 1));
   connections.push(ws);
 });
-
-app.listen(3002);
