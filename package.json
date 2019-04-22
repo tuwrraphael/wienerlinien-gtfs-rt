@@ -1,0 +1,17 @@
+{
+  "name": "wienerlinien-gtfs-rbl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@turf/distance": "^6.0.1",
+    "bomstrip": "^0.1.4",
+    "csv-parser": "^2.2.0"
+  }
+}

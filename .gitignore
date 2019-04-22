@@ -1,0 +1,9 @@
+node_modules
+gtfs.zip
+routes.txt
+stop_times.txt
+stops.txt
+trips.txt
+wienerlinien-ogd-haltestellen.csv
+wienerlinien-ogd-linien.csv
+wienerlinien-ogd-steige.csv
