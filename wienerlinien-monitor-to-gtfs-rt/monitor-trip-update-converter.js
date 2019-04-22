@@ -1,0 +1,60 @@
+var GtfsRealtimeBindings = require('gtfs-realtime-bindings');
+
+class MonitorTripUpdateConverter {
+    constructor(findTripStopFromMonitorInfo) {
+        this.findTripStopFromMonitorInfo = findTripStopFromMonitorInfo;
+    }
+
+    groupBy(xs, key) {
+        return xs.reduce(function (rv, x) {
+            (rv[x[key]] = rv[x[key]] || []).push(x);
+            return rv;
+        }, {});
+    };
+
+    async getTripUpdates(monitorResponse) {
+        var tripStops = [];
+        for (let monitor of monitorResponse.data.monitors) {
+            for (let line of monitor.lines) {
+                if (!line.departures.departure) {
+                    continue;
+                }
+                for (let departure of line.departures.departure) {
+                    var info = await this.findTripStopFromMonitorInfo(departure, line, monitor);
+                    if (null != info) {
+                        tripStops.push({
+                            trip_id: info.trip_id,
+                            stop_id: info.stop_id,
+                            departure: departure,
+                            line: line,
+                            monitor: monitor
+                        });
+                    }
+                }
+            }
+        }
+        monitorResponse.data.monitors.forEach(m => {
+            m.lines.forEach(l => {
+
+            })
+        });
+        var trip_updates = [];
+        let trips = this.groupBy(tripStops, "trip_id");
+        for (let trip_id in trips) {
+            var stops = trips[trip_id];
+            var trip_update = new GtfsRealtimeBindings.TripUpdate();
+            trip_update.trip = new GtfsRealtimeBindings.TripDescriptor();
+            trip_update.trip.trip_id = trip_id;
+            trip_update.stop_time_update = stops.map(s => {
+                var stopTimeUpdate = new GtfsRealtimeBindings.TripUpdate.StopTimeUpdate();
+                stopTimeUpdate.stop_id = s.stop_id;
+                stopTimeUpdate.departure = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
+                stopTimeUpdate.departure.time = +new Date(s.departure.timeReal);
+                return stopTimeUpdate;
+            });
+            trip_updates.push(trip_update);
+        }
+        return trip_updates;
+    }
+}
+module.exports = MonitorTripUpdateConverter;

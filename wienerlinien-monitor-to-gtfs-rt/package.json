@@ -1,0 +1,19 @@
+{
+  "name": "wienerlinien-monitor-to-gtfs-rt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "monitor-trip-update-converter.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "gtfs-realtime-bindings": "0.0.4"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4"
+  }
+}

@@ -1,0 +1,334 @@
+{
+    "data": {
+        "monitors": [
+            {
+                "locationStop": {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [
+                            16.3050332611625,
+                            48.209121603598
+                        ]
+                    },
+                    "properties": {
+                        "name": "60200597",
+                        "title": "Joachimsthalerplatz",
+                        "municipality": "Wien",
+                        "municipalityId": 90001,
+                        "type": "stop",
+                        "coordName": "WGS84",
+                        "attributes": {
+                            "rbl": 565
+                        }
+                    }
+                },
+                "lines": [
+                    {
+                        "name": "48A",
+                        "towards": "Baumgartner Höhe",
+                        "direction": "H",
+                        "richtungsId": "1",
+                        "barrierFree": true,
+                        "realtimeSupported": true,
+                        "trafficjam": false,
+                        "departures": {
+                            "departure": [
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T14:54:00.000+0200",
+                                        "timeReal": "2019-04-22T14:53:09.000+0200",
+                                        "countdown": 0
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:04:00.000+0200",
+                                        "timeReal": "2019-04-22T15:03:08.000+0200",
+                                        "countdown": 10
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:14:00.000+0200",
+                                        "timeReal": "2019-04-22T15:15:04.000+0200",
+                                        "countdown": 22
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:24:00.000+0200",
+                                        "timeReal": "2019-04-22T15:25:48.000+0200",
+                                        "countdown": 33
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:34:00.000+0200",
+                                        "timeReal": "2019-04-22T15:34:30.000+0200",
+                                        "countdown": 42
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:44:00.000+0200",
+                                        "countdown": 52
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:54:00.000+0200",
+                                        "countdown": 61
+                                    },
+                                    "vehicle": {
+                                        "name": "48A",
+                                        "towards": "Baumgartner Höhe, Pulmologisches Zentrum",
+                                        "direction": "H",
+                                        "richtungsId": "1",
+                                        "barrierFree": true,
+                                        "realtimeSupported": true,
+                                        "trafficjam": false,
+                                        "type": "ptBusCity",
+                                        "attributes": {}
+                                    }
+                                }
+                            ]
+                        },
+                        "type": "ptBusCity",
+                        "lineId": 448
+                    }
+                ]
+            },
+            {
+                "locationStop": {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [
+                            16.3050332611625,
+                            48.209121603598
+                        ]
+                    },
+                    "properties": {
+                        "name": "60200597",
+                        "title": "Joachimsthalerplatz",
+                        "municipality": "Wien",
+                        "municipalityId": 90001,
+                        "type": "stop",
+                        "coordName": "WGS84",
+                        "attributes": {
+                            "rbl": 565
+                        }
+                    }
+                },
+                "lines": [
+                    {
+                        "name": "46",
+                        "towards": "Joachimsthalerplatz",
+                        "direction": "H",
+                        "richtungsId": "1",
+                        "barrierFree": true,
+                        "realtimeSupported": true,
+                        "trafficjam": false,
+                        "departures": {
+                            "departure": [
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T14:57:00.000+0200",
+                                        "timeReal": "2019-04-22T14:59:11.000+0200",
+                                        "countdown": 6
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:07:00.000+0200",
+                                        "timeReal": "2019-04-22T15:09:32.000+0200",
+                                        "countdown": 17
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:17:00.000+0200",
+                                        "timeReal": "2019-04-22T15:18:11.000+0200",
+                                        "countdown": 25
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:27:00.000+0200",
+                                        "timeReal": "2019-04-22T15:27:30.000+0200",
+                                        "countdown": 35
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:37:00.000+0200",
+                                        "countdown": 45
+                                    },
+                                    "vehicle": {
+                                        "name": "46",
+                                        "towards": "Joachimsthalerplatz",
+                                        "direction": "H",
+                                        "richtungsId": "1",
+                                        "barrierFree": false,
+                                        "realtimeSupported": true,
+                                        "trafficjam": false,
+                                        "type": "ptTram",
+                                        "attributes": {},
+                                        "linienId": 146
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:47:00.000+0200",
+                                        "countdown": 55
+                                    },
+                                    "vehicle": {
+                                        "name": "46",
+                                        "towards": "Joachimsthalerplatz",
+                                        "direction": "H",
+                                        "richtungsId": "1",
+                                        "barrierFree": false,
+                                        "realtimeSupported": true,
+                                        "trafficjam": false,
+                                        "type": "ptTram",
+                                        "attributes": {},
+                                        "linienId": 146
+                                    }
+                                }
+                            ]
+                        },
+                        "type": "ptTram",
+                        "lineId": 146
+                    }
+                ]
+            },
+            {
+                "locationStop": {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [
+                            16.3050332611625,
+                            48.209121603598
+                        ]
+                    },
+                    "properties": {
+                        "name": "60200597",
+                        "title": "Joachimsthalerplatz",
+                        "municipality": "Wien",
+                        "municipalityId": 90001,
+                        "type": "stop",
+                        "coordName": "WGS84",
+                        "attributes": {
+                            "rbl": 565
+                        }
+                    }
+                },
+                "lines": [
+                    {
+                        "name": "10",
+                        "towards": "Unter St. Veit",
+                        "direction": "H",
+                        "richtungsId": "1",
+                        "barrierFree": true,
+                        "realtimeSupported": true,
+                        "trafficjam": false,
+                        "departures": {
+                            "departure": [
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:01:00.000+0200",
+                                        "timeReal": "2019-04-22T15:01:00.000+0200",
+                                        "countdown": 8
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:11:00.000+0200",
+                                        "timeReal": "2019-04-22T15:11:00.000+0200",
+                                        "countdown": 18
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:21:00.000+0200",
+                                        "timeReal": "2019-04-22T15:21:00.000+0200",
+                                        "countdown": 28
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:31:00.000+0200",
+                                        "timeReal": "2019-04-22T15:31:00.000+0200",
+                                        "countdown": 38
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:41:00.000+0200",
+                                        "countdown": 48
+                                    },
+                                    "vehicle": {
+                                        "name": "10",
+                                        "towards": "Unter St. Veit",
+                                        "direction": "H",
+                                        "richtungsId": "1",
+                                        "barrierFree": false,
+                                        "realtimeSupported": true,
+                                        "trafficjam": false,
+                                        "type": "ptTram",
+                                        "attributes": {},
+                                        "linienId": 110
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T15:51:00.000+0200",
+                                        "countdown": 58
+                                    },
+                                    "vehicle": {
+                                        "name": "10",
+                                        "towards": "Unter St. Veit",
+                                        "direction": "H",
+                                        "richtungsId": "1",
+                                        "barrierFree": false,
+                                        "realtimeSupported": true,
+                                        "trafficjam": false,
+                                        "type": "ptTram",
+                                        "attributes": {},
+                                        "linienId": 110
+                                    }
+                                },
+                                {
+                                    "departureTime": {
+                                        "timePlanned": "2019-04-22T16:01:00.000+0200",
+                                        "countdown": 68
+                                    },
+                                    "vehicle": {
+                                        "name": "10",
+                                        "towards": "Hummelgasse",
+                                        "direction": "H",
+                                        "richtungsId": "1",
+                                        "barrierFree": false,
+                                        "realtimeSupported": true,
+                                        "trafficjam": false,
+                                        "type": "ptTram",
+                                        "attributes": {}
+                                    }
+                                }
+                            ]
+                        },
+                        "type": "ptTram",
+                        "lineId": 110
+                    }
+                ]
+            }
+        ]
+    },
+    "message": {
+        "value": "OK",
+        "messageCode": 1,
+        "serverTime": "2019-04-22T14:52:18.783+0200"
+    }
+}
