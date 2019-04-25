@@ -45,4 +45,12 @@ The router-config.json points to the websockert host/port providing the GTFS-RT:
 }
 ~~~
 ## OTP Proxy
-TODO describe
+TODO detailed description, packages, usage...
+## Problems
+### OTP cannot handle incomplete updates
+When OTP receives stoptime updates for a stop of a trip, it calculates the delay and propagates it to the following stops, assuming that if a vehicle is delayed X minutes at a specific stop, it will also be X minutes late at the following stops.
+However, as it can't infer realtime data for the stops before, unfourtunately it does not just leave the schedule of those stops untouched, but sets the arrival/departure time to -1. This is a problem as these stops are considered invalid while planning.
+This issue is also discussed [here](https://github.com/opentripplanner/OpenTripPlanner/issues/2295) and the is an yet unmerged [PR](https://github.com/opentripplanner/OpenTripPlanner/pull/2297), which fixes this behaviour.
+OTP must be manually built to apply it at the moment.
+### OTP Websocket protobuf crashes on multiple TripUpdate Feed-Entities
+In my implementation, each websocket transmitted FeedMessage only contains one entity. The GTFS-RT standard specifies multiple are supported. I validated the resulting protobuf successfully using the [gtfs-realtime-validator](https://github.com/CUTR-at-USF/gtfs-realtime-validator) but unfourniately it was not accepted by the OTP deserializer.
