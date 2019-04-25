@@ -19,7 +19,8 @@ class MonitorTripUpdateConverter {
                 if (!line.departures.departure) {
                     continue;
                 }
-                var res = await this.findTripStopFromMonitorInfo(line.departures.departure, line, monitor);
+                var res = await this.findTripStopFromMonitorInfo(line.departures.departure
+                    .filter(d => d.departureTime && (d.departureTime.timeReal || d.departureTime.timePlanned)), line, monitor);
                 if (null != res) {
                     for (let info of res) {
                         tripStops.push({
@@ -49,7 +50,9 @@ class MonitorTripUpdateConverter {
                 var stopTimeUpdate = new GtfsRealtimeBindings.TripUpdate.StopTimeUpdate();
                 stopTimeUpdate.stop_id = s.stop_id;
                 stopTimeUpdate.departure = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
-                stopTimeUpdate.departure.time = +new Date(s.departure.timeReal);
+                stopTimeUpdate.departure.time = Math.round(new Date(s.departure.departureTime.timeReal || s.departure.departureTime.timePlanned).getTime()/1000);
+                stopTimeUpdate.arrival = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
+                stopTimeUpdate.arrival.time = stopTimeUpdate.departure.time;
                 return stopTimeUpdate;
             });
             trip_updates.push(trip_update);

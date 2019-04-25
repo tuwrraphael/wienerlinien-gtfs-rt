@@ -20,7 +20,7 @@ let converter = new MonitorTripUpdateConverter(tripStopFinder.findTripStop);
 let id = 0;
 var connections = [];
 
-app.post('/monitor', async (req, res, next) => {
+app.get('/monitor', async (req, res, next) => {
   if (req.query["rbl"]) {
     try {
       var monres = await fetch(`https://www.wienerlinien.at/ogd_realtime/monitor?rbl=${req.query["rbl"]}&sender=${APIKEY}`);
@@ -33,21 +33,39 @@ app.post('/monitor', async (req, res, next) => {
         res.status(500).end();
       }
       if (updates.length) {
-        var msg = new GtfsRealtimeBindings.FeedMessage();
-        msg.header = new GtfsRealtimeBindings.FeedHeader();
-        msg.header.gtfs_realtime_version = "2.0";
-        msg.header.incrementality = "DIFFERENTIAL";
-        msg.header.timestamp = +(new Date(monitor.message.serverTime));
-        msg.entity = updates.map(u => {
+        updates.forEach(u => {
+          var msg = new GtfsRealtimeBindings.FeedMessage();
+          msg.header = new GtfsRealtimeBindings.FeedHeader();
+          msg.header.gtfs_realtime_version = "2.0";
+          msg.header.incrementality = "DIFFERENTIAL";
+          msg.header.timestamp = (Math.round(+new Date(monitor.message.serverTime) / 1000));
           var e = new GtfsRealtimeBindings.FeedEntity();
           e.id = ++id;
-          e.trip_update = u;
-          return e;
-        });
-        connections.forEach(c => {
-          c.send(msg.encode().array);
+          e.trip_update = new GtfsRealtimeBindings.TripUpdate();
+          e.trip_update.trip = new GtfsRealtimeBindings.TripDescriptor();
+          e.trip_update.trip.trip_id = u.trip.trip_id.replace(/^1:/, "");
+          e.trip_update.stop_time_update = u.stop_time_update.map(s => {
+            var stopTimeUpdate = new GtfsRealtimeBindings.TripUpdate.StopTimeUpdate();
+            stopTimeUpdate.stop_id = s.stop_id.replace(/^1:/, "");
+            stopTimeUpdate.departure = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
+            stopTimeUpdate.departure.time = s.departure.time;
+            stopTimeUpdate.arrival = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
+            stopTimeUpdate.arrival.time = s.arrival.time;
+            return stopTimeUpdate;
+          });
+          msg.entity = e;
+          connections.forEach(c => {
+            try {
+              c.send(msg.encode().array);
+            }
+            catch{
+              connections.splice(connections.indexOf(c), 1);
+            }
+          });
         });
       }
+      //res.contentType("application/x-google-protobuf");
+      //res.end(msg.encode().toBuffer(), 'binary');
       res.status(200).end();
     }
     catch (e) {
@@ -68,5 +86,6 @@ wss.on('connection', function connection(ws) {
     console.log('received: %s', message);
   });
   ws.on('error', () => connections.splice(connections.indexOf(ws), 1));
+  ws.on('close', () => connections.splice(connections.indexOf(ws), 1));
   connections.push(ws);
 });
