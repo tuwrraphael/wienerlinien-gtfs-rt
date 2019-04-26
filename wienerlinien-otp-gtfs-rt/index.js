@@ -1,4 +1,4 @@
-const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
+const GtfsRealtimeBindings = require('gtfs-realtime-bindings').transit_realtime;
 const express = require('express');
 const app = express();
 const fetch = require('node-fetch');
@@ -34,29 +34,32 @@ app.get('/monitor', async (req, res, next) => {
       }
       if (updates.length) {
         updates.forEach(u => {
-          var msg = new GtfsRealtimeBindings.FeedMessage();
-          msg.header = new GtfsRealtimeBindings.FeedHeader();
-          msg.header.gtfs_realtime_version = "2.0";
-          msg.header.incrementality = "DIFFERENTIAL";
-          msg.header.timestamp = (Math.round(+new Date(monitor.message.serverTime) / 1000));
-          var e = new GtfsRealtimeBindings.FeedEntity();
-          e.id = ++id;
-          e.trip_update = new GtfsRealtimeBindings.TripUpdate();
-          e.trip_update.trip = new GtfsRealtimeBindings.TripDescriptor();
-          e.trip_update.trip.trip_id = u.trip.trip_id.replace(/^1:/, "");
-          e.trip_update.stop_time_update = u.stop_time_update.map(s => {
-            var stopTimeUpdate = new GtfsRealtimeBindings.TripUpdate.StopTimeUpdate();
-            stopTimeUpdate.stop_id = s.stop_id.replace(/^1:/, "");
-            stopTimeUpdate.departure = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
-            stopTimeUpdate.departure.time = s.departure.time;
-            stopTimeUpdate.arrival = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
-            stopTimeUpdate.arrival.time = s.arrival.time;
-            return stopTimeUpdate;
+          var msg = GtfsRealtimeBindings.FeedMessage.create({
+            header: {
+              gtfsRealtimeVersion: "2.0",
+              incrementality: 1,
+              timestamp: (Math.round(+new Date(monitor.message.serverTime) / 1000))
+            },
+            entity: [{
+              id: `${++id}`,
+              tripUpdate: {
+                ...u,
+                trip: {
+                  ...u.trip,
+                  tripId: u.trip.tripId.replace(/^1:/, "")
+                },
+                stopTimeUpdate: u.stopTimeUpdate.map(s => {
+                  return {
+                    ...s,
+                    stopId: s.stopId.replace(/^1:/, "")
+                  };
+                })
+              }
+            }]
           });
-          msg.entity = e;
           connections.forEach(c => {
             try {
-              c.send(msg.encode().array);
+              c.send(GtfsRealtimeBindings.FeedMessage.encode(msg).finish());
             }
             catch{
               connections.splice(connections.indexOf(c), 1);

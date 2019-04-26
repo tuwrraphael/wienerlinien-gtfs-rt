@@ -1,5 +1,3 @@
-var GtfsRealtimeBindings = require('gtfs-realtime-bindings');
-
 class MonitorTripUpdateConverter {
     constructor(findTripStopFromMonitorInfo) {
         this.findTripStopFromMonitorInfo = findTripStopFromMonitorInfo;
@@ -43,19 +41,25 @@ class MonitorTripUpdateConverter {
         let trips = this.groupBy(tripStops, "trip_id");
         for (let trip_id in trips) {
             var stops = trips[trip_id];
-            var trip_update = new GtfsRealtimeBindings.TripUpdate();
-            trip_update.trip = new GtfsRealtimeBindings.TripDescriptor();
-            trip_update.trip.trip_id = trip_id;
-            trip_update.stop_time_update = stops.map(s => {
-                var stopTimeUpdate = new GtfsRealtimeBindings.TripUpdate.StopTimeUpdate();
-                stopTimeUpdate.stop_id = s.stop_id;
-                stopTimeUpdate.departure = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
-                stopTimeUpdate.departure.time = Math.round(new Date(s.departure.departureTime.timeReal || s.departure.departureTime.timePlanned).getTime()/1000);
-                stopTimeUpdate.arrival = new GtfsRealtimeBindings.TripUpdate.StopTimeEvent();
-                stopTimeUpdate.arrival.time = stopTimeUpdate.departure.time;
-                return stopTimeUpdate;
-            });
-            trip_updates.push(trip_update);
+            var u = {
+                trip: {
+                    tripId: trip_id
+                },
+                stopTimeUpdate: stops.map(s => {
+                    return {
+                        stopId: s.stop_id,
+                        departure: {
+                            time: Math.round(new Date(s.departure.departureTime.timeReal || s.departure.departureTime.timePlanned).getTime() / 1000)
+                        },
+                        arrival: {
+                            time: Math.round(new Date(s.departure.departureTime.timeReal || s.departure.departureTime.timePlanned).getTime() / 1000)
+                        },
+                        delay: null,
+                        scheduleRelationship: "SCHEDULED"
+                    };
+                })
+            }
+            trip_updates.push(u);
         }
         return trip_updates;
     }

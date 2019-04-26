@@ -1,6 +1,7 @@
 var fetch = require('node-fetch');
 const startOfToday = require("date-fns/start_of_today");
 const addSeconds = require("date-fns/add_seconds");
+const addMinutes = require("date-fns/add_minutes");
 const distance = require("@turf/distance").default;
 
 class OTPMonitorTripStopFinder {
@@ -35,17 +36,25 @@ class OTPMonitorTripStopFinder {
                     continue;
                 }
                 checkedStops.push(closest.s.id);
-                var stopTimes = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/stops/${closest.s.id}/stoptimes?startTime=${Math.round((+new Date()) / 1000)}&timeRange=${70 * 60}&numberOfDepartures=10`)).json();
+                var stopTimes = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/stops/${closest.s.id}/stoptimes?startTime=${Math.round((+addMinutes(new Date(), -10)) / 1000)}&timeRange=${80 * 60}&numberOfDepartures=10`)).json();
                 for (let p of stopTimes) {
                     let candidate = {
                         tripupdates: []
                     };
                     for (let departure of departures) {
-                        var stopTime = p.times.find(t => {
-                            var scheduled = addSeconds(startOfToday(), t.scheduledDeparture);
-                            var planned = new Date(departure.departureTime.timePlanned);
-                            return scheduled.getTime() == planned.getTime();
-                        });
+                        var planned = new Date(departure.departureTime.timePlanned);
+                        var startOfTodayInGtfsTimezone = new Date(planned);
+                        startOfTodayInGtfsTimezone.setHours(0);
+                        startOfTodayInGtfsTimezone.setMinutes(0);
+                        startOfTodayInGtfsTimezone.setSeconds(0);
+                        startOfTodayInGtfsTimezone.setMilliseconds(0);
+                        let sorted = p.times.map(t => {
+                            return {
+                                ...t,
+                                distance: Math.abs(+planned - (+addSeconds(startOfTodayInGtfsTimezone, t.scheduledDeparture)))
+                            };
+                        }).sort((a, b) => a.distance - b.distance);
+                        let stopTime = sorted.length > 0 && sorted[0].distance < (5 * 60000) ? sorted[0] : null;
                         if (null != stopTime) {
                             trips = trips || await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/patterns/${pattern.id}/trips`)).json();
                             let trip = trips.find(t => t.id == stopTime.tripId);
