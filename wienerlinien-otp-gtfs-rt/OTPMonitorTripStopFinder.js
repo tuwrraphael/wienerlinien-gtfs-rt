@@ -4,9 +4,7 @@ const addMinutes = require("date-fns/add_minutes");
 const format = require("date-fns/format");
 const distance = require("@turf/distance").default;
 const levenshtein = require('js-levenshtein');
-const {
-    listTimeZones, findTimeZone, getZonedTime, getUnixTime
-} = require('timezone-support')
+const { findTimeZone, getUnixTime } = require('timezone-support')
 
 const MAX_DIRECTION_EDIT_DISTANCE = 4;
 const OTP_MONITOR_PAST = 10;

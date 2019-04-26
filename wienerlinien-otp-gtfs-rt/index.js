@@ -9,13 +9,14 @@ const WebSocket = require('ws');
 const APIKEY = "";
 const OTPInstance = "http://smallvm.westeurope.cloudapp.azure.com:3001";
 const OTPRouterId = "wien";
+const FeedId = "1";
 
-let tripStopFinder = new OTPMonitorTripStopFinder(OTPInstance, OTPRouterId);
+let tripStopFinder = new OTPMonitorTripStopFinder(OTPInstance, OTPRouterId, FeedId);
 tripStopFinder.initialize().catch(function (e) {
   console.error("failed to initialize OTPMonitorTripStopFinder", e);
 });
 
-let converter = new MonitorTripUpdateConverter(tripStopFinder.findTripStop);
+let converter = new MonitorTripUpdateConverter(tripStopFinder.findTrip, tripStopFinder.getStopTimesForTrip);
 
 let id = 0;
 var connections = [];
@@ -32,6 +33,7 @@ app.get('/monitor', async (req, res, next) => {
         console.error(e);
         res.status(500).end();
       }
+      // await tripStopFinder.debugTripUpdates(updates);
       if (updates.length) {
         updates.forEach(u => {
           var msg = GtfsRealtimeBindings.FeedMessage.create({
