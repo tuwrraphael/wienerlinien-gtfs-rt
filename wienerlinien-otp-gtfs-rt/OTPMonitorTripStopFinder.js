@@ -1,82 +1,159 @@
 var fetch = require('node-fetch');
-const startOfToday = require("date-fns/start_of_today");
 const addSeconds = require("date-fns/add_seconds");
 const addMinutes = require("date-fns/add_minutes");
+const format = require("date-fns/format");
 const distance = require("@turf/distance").default;
+const levenshtein = require('js-levenshtein');
+const {
+    listTimeZones, findTimeZone, getZonedTime, getUnixTime
+} = require('timezone-support')
+
+const MAX_DIRECTION_EDIT_DISTANCE = 4;
+const OTP_MONITOR_PAST = 10;
+const OTP_MONITOR_FUTURE = 70;
+const MAX_STOPTIME_DISTANCE = 10;
 
 class OTPMonitorTripStopFinder {
-    constructor(baseUrl, routerId) {
+    constructor(baseUrl, routerId, feedId) {
         this.baseUrl = baseUrl;
         this.routerId = routerId;
         this.initialized = false;
-        this.findTripStop = this.findTripStop.bind(this);
+        this.findTrip = this.findTrip.bind(this);
+        this.getStopTimesForTrip = this.getStopTimesForTrip.bind(this);
+        this.feedId = feedId;
+        this.monitors = {};
     }
     async initialize() {
         this.routes = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/routes`)).json();
+        let agencies = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/agencies/${this.feedId}`)).json();
+        this.timezone = findTimeZone(agencies[0].timezone);
         this.initialized = true;
     }
-    async findTripStop(departures, line, monitor) {
+
+    convertMonitorDirection(line) {
+        return line.direction == "H" ? 0 : 1;
+    }
+
+    async getOPTMonitor(stopId) {
+        if (!this.monitors[stopId]) {
+            this.monitors[stopId] = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/stops/${stopId}/stoptimes?startTime=${Math.round((+addMinutes(new Date(), -OTP_MONITOR_PAST)) / 1000)}&timeRange=${(OTP_MONITOR_PAST + OTP_MONITOR_FUTURE) * 60}&numberOfDepartures=10`)).json();
+        }
+        return this.monitors[stopId];
+    }
+
+    startOfTodayInTimezone() {
+        var today = new Date();
+        return new Date(getUnixTime({
+            year: today.getFullYear(),
+            month: today.getMonth() + 1,
+            day: today.getDate(),
+            hours: 0,
+            minutes: 0,
+            seconds: 0
+        }, this.timezone));
+    }
+
+    findClosestStoptime(stopTimes, departureTime) {
+        let sorted = stopTimes.map(t => {
+            return {
+                stopTime: t,
+                scheduleDistance: +departureTime - (+t.scheduled)
+            };
+        }).sort((a, b) => Math.abs(a.scheduleDistance) - Math.abs(b.scheduleDistance));
+        let stopTime = sorted.length > 0 && Math.abs(sorted[0].scheduleDistance) < (MAX_STOPTIME_DISTANCE * 60000) ? sorted[0] : null;
+        return stopTime;
+    }
+
+    async findTripsInPattern(departures, line, monitor, patternId) {
+        if (!departures.length) {
+            return null;
+        }
+        departures = departures.map(d => { return { ...d, planned: new Date(d.departureTime.timePlanned) }; })
+            .sort((a, b) => +a.planned - +b.planned);
+        var pattern = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/patterns/${patternId}`)).json();
+        if (pattern.trips[0].direction != this.convertMonitorDirection(line)) {
+            return null;
+        }
+        let lastStop = pattern.stops[pattern.stops.length - 1];
+        if (levenshtein(lastStop.name.toLowerCase(), line.towards.toLowerCase()) > MAX_DIRECTION_EDIT_DISTANCE) {
+            return null;
+        }
+        let stopsWithDistance = pattern.stops.map(s => { return { s: s, distance: distance([s.lon, s.lat], [monitor.locationStop.geometry.coordinates[0], monitor.locationStop.geometry.coordinates[1]]) }; });
+        let closest = stopsWithDistance.sort((a, b) => a.distance - b.distance)[0].s;
+        let otpMonitor = await this.getOPTMonitor(closest.id);
+        let forPattern = otpMonitor.find(m => m.pattern.id == patternId);
+        if (null == forPattern) {
+            return null;
+        }
+        let startOfTodayInGtfsTimezone = this.startOfTodayInTimezone();
+        let stopTimes = forPattern.times.map(t => {
+            return {
+                ...t,
+                scheduled: (addSeconds(startOfTodayInGtfsTimezone, t.scheduledDeparture))
+            };
+        });
+        let results = [];
+        for (let departure of departures) {
+            let closestStopTime = this.findClosestStoptime(stopTimes, departure.planned);
+            if (null != closestStopTime) {
+                results.push({
+                    departure: departure,
+                    stop: closest,
+                    stopTime: closestStopTime.stopTime,
+                    tripId: closestStopTime.stopTime.tripId,
+                    scheduleDistance: closestStopTime.scheduleDistance
+                });
+                stopTimes.splice(0, stopTimes.indexOf(closestStopTime.stopTime) + 1);
+            }
+        }
+        return results;
+    }
+
+    async findTrip(departures, line, monitor) {
         if (!this.initialized || !monitor.locationStop || !monitor.locationStop.geometry) {
             return null;
         }
         var routes = this.routes.filter(r => r.shortName == line.name);
         let candidates = [];
         for (let route of routes) {
-            var patterns = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/routes/${route.id}/patterns`)).json();
-            var checkedStops = [];
+            let patterns = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/routes/${route.id}/patterns`)).json();
             for (let pattern of patterns) {
-                var trips = null;
-                var stops = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/patterns/${pattern.id}/stops`)).json();
-                if (stops.length == 0) {
-                    continue;
-                }
-                let stopsWithDistance = stops.map(s => { return { s: s, distance: distance([s.lon, s.lat], [monitor.locationStop.geometry.coordinates[0], monitor.locationStop.geometry.coordinates[1]]) }; });
-                let closest = stopsWithDistance.sort((a, b) => a.distance - b.distance)[0];
-                if (checkedStops.indexOf(closest.s.sid) > -1) {
-                    continue;
-                }
-                checkedStops.push(closest.s.id);
-                var stopTimes = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/stops/${closest.s.id}/stoptimes?startTime=${Math.round((+addMinutes(new Date(), -10)) / 1000)}&timeRange=${80 * 60}&numberOfDepartures=10`)).json();
-                for (let p of stopTimes) {
-                    let candidate = {
-                        tripupdates: []
-                    };
-                    for (let departure of departures) {
-                        var planned = new Date(departure.departureTime.timePlanned);
-                        var startOfTodayInGtfsTimezone = new Date(planned);
-                        startOfTodayInGtfsTimezone.setHours(0);
-                        startOfTodayInGtfsTimezone.setMinutes(0);
-                        startOfTodayInGtfsTimezone.setSeconds(0);
-                        startOfTodayInGtfsTimezone.setMilliseconds(0);
-                        let sorted = p.times.map(t => {
-                            return {
-                                ...t,
-                                distance: Math.abs(+planned - (+addSeconds(startOfTodayInGtfsTimezone, t.scheduledDeparture)))
-                            };
-                        }).sort((a, b) => a.distance - b.distance);
-                        let stopTime = sorted.length > 0 && sorted[0].distance < (5 * 60000) ? sorted[0] : null;
-                        if (null != stopTime) {
-                            trips = trips || await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/patterns/${pattern.id}/trips`)).json();
-                            let trip = trips.find(t => t.id == stopTime.tripId);
-                            if (trip && trip.direction == (line.direction == "H" ? 0 : 1)) {
-                                console.log(`found ${stopTime.tripId} for ${line.name}`);
-                                candidate.tripupdates.push({
-                                    stop_id: closest.s.id,
-                                    trip_id: stopTime.tripId,
-                                    departure: departure
-                                });
-                            }
-                        }
-                    }
-                    candidates.push(candidate);
+                let patternMatches = await this.findTripsInPattern(departures, line, monitor, pattern.id);
+                if (null != patternMatches && patternMatches.length) {
+                    candidates.push({ pattern, matches: patternMatches });
                 }
             }
         }
-        let sorted = candidates.sort((a, b) => b.tripupdates.length - a.tripupdates.length);
-        if (sorted.length > 0) {
-            return sorted[0].tripupdates;
+        if (candidates.length < 1) {
+            return [];
         }
-        return null;
+        candidates = candidates.sort((a, b) => b.matches.length - a.matches.length);
+        let bestMatching = candidates.filter(c => c.matches.length == candidates[0].matches.length)
+            .map(c => { return { ...c, distanceSum: c.matches.reduce((acc, val) => acc + Math.abs(val.scheduleDistance)) } })
+            .sort((a, b) => a.distanceSum - b.distanceSum);
+        return bestMatching[0].matches;
+    }
+
+    async getStopTimesForTrip(tripId) {
+        let stopTimes = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/trips/${tripId}/stoptimes`)).json();
+        let startOfTodayInGtfsTimezone = this.startOfTodayInTimezone();
+        return stopTimes.map(t => {
+            return {
+                ...t,
+                scheduledDeparture: (addSeconds(startOfTodayInGtfsTimezone, t.scheduledDeparture)),
+                realtimeDeparture: (addSeconds(startOfTodayInGtfsTimezone, t.realtimeDeparture))
+            };
+        });
+    }
+
+    async debugTripUpdates(tripUpdates) {
+        for (let update of tripUpdates) {
+            console.log(`Update for trip ${update.trip.tripId}:`);
+            for (let stop of update.stopTimeUpdate) {
+                let stopName = (await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/index/stops/${stop.stopId}`)).json()).name;
+                console.log(`${stopName}: ${format(new Date(stop.departure.time * 1000), "HH:mm:ss")}`);
+            }
+        }
     }
 }
 module.exports = OTPMonitorTripStopFinder;
