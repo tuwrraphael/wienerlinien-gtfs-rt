@@ -4,33 +4,13 @@ const OTPProxy = require("./OTPProxy");
 const WebSocket = require('ws');
 const url = require("url");
 
-const app = express();
+const settings = require("./settings");
 
-const OTPInstance = "http://smallvm.westeurope.cloudapp.azure.com:3001";
-const OTPRouterId = "wien";
+const app = express();
 
 var connections = [];
 
-let optOptions = {
-  feedId: "1",
-  baseUrl: OTPInstance,
-  routerId: OTPRouterId
-};
-
-let wlOptions = {
-  haltestellenCsv: "./wienerlinien-ogd-haltestellen.csv",
-  steigeCsv: "./wienerlinien-ogd-steige.csv",
-  linienCsv: "./wienerlinien-ogd-linien.csv",
-  stopsCsv: "./stops.txt",
-  routesCsv: "./routes.txt",
-  tripsCsv: "./trips.txt",
-  wlApiKey: ""
-};
-
-let otpProxy = new OTPProxy({
-  ...optOptions,
-  ...wlOptions
-}, function (feedMessage) {
+let otpProxy = new OTPProxy(settings.options, function (feedMessage) {
   let protobufmsg = GtfsRealtimeBindings.FeedMessage.create(feedMessage);
   let encoded = GtfsRealtimeBindings.FeedMessage.encode(protobufmsg).finish();
   connections.forEach(c => {
@@ -54,9 +34,9 @@ app.get('/plan', async (req, res, next) => {
   }
 });
 
-app.listen(3002);
+app.listen(settings.optProxyPort);
 
-const wss = new WebSocket.Server({ port: 3003 });
+const wss = new WebSocket.Server({ port: settings.websocketPort });
 
 wss.on('connection', function connection(ws) {
   ws.on('message', function incoming(message) {
