@@ -32,7 +32,7 @@ class RblProvider {
             if (linien.length == 0) {
                 throw new Error("linie not found");
             }
-            else if (linien.length > 1) {
+            else if (linien.length > 0) {
                 linie = linien.find(l => l.echtzeit == true)
                 if (linie == null) {
                     linie = linien[0];
