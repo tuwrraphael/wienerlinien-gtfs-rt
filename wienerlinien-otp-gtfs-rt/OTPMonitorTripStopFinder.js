@@ -65,7 +65,7 @@ class OTPMonitorTripStopFinder {
     cleanName(name) {
         return name
             .toLowerCase()
-            .replace(/\s\(?(u|s)\)?(\s|$)/, "")
+            .replace(/\s\(?(u|s|\+)+\)?(\s|$)/, "")
             .split(/,|\.|\s/)
             .filter(s => "" != s);
     }
