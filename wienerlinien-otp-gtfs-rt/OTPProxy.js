@@ -21,6 +21,7 @@ class OTPProxy {
                     setTimeout(init, RETRY_SECS);
                 });
         }
+        init();
 
         this.converter = new MonitorTripUpdateConverter(this.tripStopFinder.findTrip, this.tripStopFinder.getStopTimesForTrip);
         this.rblProvider = new RblProvider();
