@@ -47,15 +47,12 @@ class MonitorTripUpdateConverter {
             delay = +rtStopTime.realtimeDeparture - +stopTime.scheduledDeparture;
             let following = stopTimes.filter((s, j) => j > stopTimeIndex);
             // adujst the delay to prevent non increasing stoptimes
-            if (delay > 0 && null != lastDelay && lastDelay < delay) {
-                let delayDecrease = (delay - lastDelay) / (lastRtStopTimeIndex - stopTimeIndex);
-                if (delayDecrease < 0) {
-                    // updates of the following stop seem implausible: clear
-                    updates = [];
-                }
-                delay -= delayDecrease;
+            let delayDecrease = 0;
+            if (null != lastDelay && lastDelay < delay) {
+                delayDecrease = (delay - lastDelay) / (lastRtStopTimeIndex - stopTimeIndex);
             }
             for (let followingStopTime of following) {
+                delay -= delayDecrease;
                 if (null != updates[followingStopTime.stopId]) {
                     break;
                 }
