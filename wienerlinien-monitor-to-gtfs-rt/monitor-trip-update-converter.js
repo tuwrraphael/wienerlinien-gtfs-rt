@@ -47,7 +47,7 @@ class MonitorTripUpdateConverter {
             let stopTime = stopTimes.find(s => rtStopTime.stop.id == s.stopId);
             let stopTimeIndex = stopTimes.indexOf(stopTime);
             updates[rtStopTime.stop.id] = rtStopTime.realtimeDeparture;
-            delay = +rtStopTime.realtimeDeparture - +stopTime.realtimeDeparture;
+            delay = +rtStopTime.realtimeDeparture - +stopTime.scheduledDeparture;
             let following = stopTimes.filter((s, j) => j > stopTimeIndex);
             // adujst the delay to prevent non increasing stoptimes
             if (delay > 0 && null != lastRtStopTime) {
@@ -87,6 +87,17 @@ class MonitorTripUpdateConverter {
                 return false;
             }
             last = +time.realtimeDeparture;
+        }
+        return true;
+    }
+
+    checkUpdatesIncreasing(updates) {
+        let last = 0;
+        for (let time of updates) {
+            if (last > +time.time) {
+                return false;
+            }
+            last = +time.time;
         }
         return true;
     }
@@ -135,6 +146,10 @@ class MonitorTripUpdateConverter {
                 break;
             }
             let updates = this.mergeUpdates(stoptimes, rtStopTimes);
+            if (!this.checkUpdatesIncreasing(updates)) {
+                console.error(`rt stop times for trip ${tripId} are non increasing`);
+                break;
+            }
             var u = {
                 trip: {
                     tripId: tripId

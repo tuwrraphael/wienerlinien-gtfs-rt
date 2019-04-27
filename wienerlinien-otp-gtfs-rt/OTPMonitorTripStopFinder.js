@@ -76,8 +76,18 @@ class OTPMonitorTripStopFinder {
         if (levenshtein(lastStop.name.toLowerCase(), line.towards.toLowerCase()) > MAX_DIRECTION_EDIT_DISTANCE) {
             return null;
         }
-        let stopsWithDistance = pattern.stops.map(s => { return { s: s, distance: distance([s.lon, s.lat], [monitor.locationStop.geometry.coordinates[0], monitor.locationStop.geometry.coordinates[1]]) }; });
-        let closest = stopsWithDistance.sort((a, b) => a.distance - b.distance)[0].s;
+        let stopsWithDistance = pattern.stops.map(s => {
+            return {
+                s: s,
+                distance: distance([s.lon, s.lat], [monitor.locationStop.geometry.coordinates[0], monitor.locationStop.geometry.coordinates[1]]),
+                nameDistance: levenshtein(monitor.locationStop.properties.title.toLowerCase(), s.name.toLowerCase())
+            };
+        });
+        let plausibleStops = stopsWithDistance.filter(p => p.distance < 1 && p.nameDistance < 6);
+        if (plausibleStops.length == 0) {
+            return null;
+        }
+        let closest = plausibleStops.sort((a, b) => a.distance - b.distance)[0].s;
         let otpMonitor = await this.getOPTMonitor(closest.id);
         let forPattern = otpMonitor.find(m => m.pattern.id == patternId);
         if (null == forPattern) {
@@ -91,26 +101,46 @@ class OTPMonitorTripStopFinder {
             };
         });
         let results = [];
+        let splicedStoptimes = [...stopTimes];
         for (let departure of departures) {
             let closestStopTime = this.findClosestStoptime(stopTimes, departure.planned);
+            let closestExclusiveStopTime = this.findClosestStoptime(splicedStoptimes, departure.planned);
             if (null != closestStopTime) {
                 results.push({
                     departure: departure,
                     stop: closest,
-                    stopTime: closestStopTime.stopTime,
-                    tripId: closestStopTime.stopTime.tripId,
-                    scheduleDistance: closestStopTime.scheduleDistance
+                    closestStopTime: closestStopTime,
+                    closestExclusiveStopTime: closestExclusiveStopTime
                 });
-                stopTimes.splice(0, stopTimes.indexOf(closestStopTime.stopTime) + 1);
+                splicedStoptimes.splice(0, splicedStoptimes.indexOf(closestExclusiveStopTime.stopTime) + 1);
             }
         }
         return results;
+    }
+
+    getBestMatchingForDeparture(departure, candidates) {
+        let match = null;
+        let value = 0;
+        for (let patternCandidate of candidates) {
+            for (let candidate of patternCandidate.matches) {
+                if (candidate.departure.id == departure.id) {
+                    let candidateValue = Math.abs(candidate.closestStopTime.scheduleDistance);
+                    if (match == null || candidateValue < value) {
+                        value = candidateValue;
+                        match = candidate;
+                    }
+                }
+            }
+        }
+        return match;
     }
 
     async findTrip(departures, line, monitor) {
         if (!this.initialized || !monitor.locationStop || !monitor.locationStop.geometry) {
             return null;
         }
+        let id = 0;
+        departures = departures.map(d => { return { ...d, id: ++id }; });
         var routes = this.routes.filter(r => r.shortName == line.name);
         let candidates = [];
         for (let route of routes) {
@@ -122,14 +152,37 @@ class OTPMonitorTripStopFinder {
                 }
             }
         }
-        if (candidates.length < 1) {
-            return [];
+        let result = [];
+        for (let departure of departures) {
+            let bestCandidate = this.getBestMatchingForDeparture(departure, candidates);
+            if (null != bestCandidate) {
+                result.push(bestCandidate);
+                // the trip can't be taken multiple times 
+                candidates.forEach(c => {
+                    // prioritze the next possible match in pattern if it was taken
+                    c.matches.forEach(m => {
+                        if (m != bestCandidate && // dont change the candidate
+                            bestCandidate.closestStopTime.stopTime.tripId == m.closestStopTime.stopTime.tripId) {
+                            if (m.closestExclusiveStopTime.stopTime.tripId != bestCandidate.closestStopTime.stopTime.tripId) {
+                                m.closestStopTime = m.closestExclusiveStopTime;
+                            }
+                        }
+                    });
+                    // filter trips
+                    c.matches = c.matches.filter(m =>
+                        bestCandidate.closestStopTime.stopTime.tripId != m.closestStopTime.stopTime.tripId);
+                });
+            }
         }
-        candidates = candidates.sort((a, b) => b.matches.length - a.matches.length);
-        let bestMatching = candidates.filter(c => c.matches.length == candidates[0].matches.length)
-            .map(c => { return { ...c, distanceSum: c.matches.reduce((acc, val) => acc + Math.abs(val.scheduleDistance)) } })
-            .sort((a, b) => a.distanceSum - b.distanceSum);
-        return bestMatching[0].matches;
+        return result.map(r => {
+            return {
+                departure: r.departure,
+                stop: r.stop,
+                stopTime: r.closestStopTime.stopTime,
+                tripId: r.closestStopTime.stopTime.tripId,
+                scheduleDistance: r.closestStopTime.scheduleDistance
+            };
+        });
     }
 
     async getStopTimesForTrip(tripId) {
