@@ -1,4 +1,4 @@
-var fetch = require('node-fetch');
+const fetch = require('node-fetch');
 const addSeconds = require("date-fns/add_seconds");
 const addMinutes = require("date-fns/add_minutes");
 const format = require("date-fns/format");

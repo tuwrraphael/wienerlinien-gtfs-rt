@@ -1,84 +1,56 @@
 const GtfsRealtimeBindings = require('gtfs-realtime-bindings').transit_realtime;
 const express = require('express');
-const app = express();
-const fetch = require('node-fetch');
-const MonitorTripUpdateConverter = require("../wienerlinien-monitor-to-gtfs-rt");
-const OTPMonitorTripStopFinder = require("./OTPMonitorTripStopFinder");
+const OTPProxy = require("./OTPProxy");
 const WebSocket = require('ws');
+const url = require("url");
 
-const APIKEY = "";
+const app = express();
+
 const OTPInstance = "http://smallvm.westeurope.cloudapp.azure.com:3001";
 const OTPRouterId = "wien";
-const FeedId = "1";
 
-let tripStopFinder = new OTPMonitorTripStopFinder(OTPInstance, OTPRouterId, FeedId);
-tripStopFinder.initialize().catch(function (e) {
-  console.error("failed to initialize OTPMonitorTripStopFinder", e);
-});
-
-let converter = new MonitorTripUpdateConverter(tripStopFinder.findTrip, tripStopFinder.getStopTimesForTrip);
-
-let id = 0;
 var connections = [];
 
-app.get('/monitor', async (req, res, next) => {
-  if (req.query["rbl"]) {
+let optOptions = {
+  feedId: "1",
+  baseUrl: OTPInstance,
+  routerId: OTPRouterId
+};
+
+let wlOptions = {
+  haltestellenCsv: "./wienerlinien-ogd-haltestellen.csv",
+  steigeCsv: "./wienerlinien-ogd-steige.csv",
+  linienCsv: "./wienerlinien-ogd-linien.csv",
+  stopsCsv: "./stops.txt",
+  routesCsv: "./routes.txt",
+  tripsCsv: "./trips.txt",
+  wlApiKey: ""
+};
+
+let otpProxy = new OTPProxy({
+  ...optOptions,
+  ...wlOptions
+}, function (feedMessage) {
+  let protobufmsg = GtfsRealtimeBindings.FeedMessage.create(feedMessage);
+  let encoded = GtfsRealtimeBindings.FeedMessage.encode(protobufmsg).finish();
+  connections.forEach(c => {
     try {
-      var monres = await fetch(`https://www.wienerlinien.at/ogd_realtime/monitor?rbl=${req.query["rbl"]}&sender=${APIKEY}`);
-      var monitor = await monres.json();
-      try {
-        var updates = await converter.getTripUpdates(monitor);
-      }
-      catch (e) {
-        console.error(e);
-        res.status(500).end();
-      }
-      // await tripStopFinder.debugTripUpdates(updates);
-      if (updates.length) {
-        updates.forEach(u => {
-          var msg = GtfsRealtimeBindings.FeedMessage.create({
-            header: {
-              gtfsRealtimeVersion: "2.0",
-              incrementality: 1,
-              timestamp: (Math.round(+new Date(monitor.message.serverTime) / 1000))
-            },
-            entity: [{
-              id: `${++id}`,
-              tripUpdate: {
-                ...u,
-                trip: {
-                  ...u.trip,
-                  tripId: u.trip.tripId.replace(/^1:/, "")
-                },
-                stopTimeUpdate: u.stopTimeUpdate.map(s => {
-                  return {
-                    ...s,
-                    stopId: s.stopId.replace(/^1:/, "")
-                  };
-                })
-              }
-            }]
-          });
-          connections.forEach(c => {
-            try {
-              c.send(GtfsRealtimeBindings.FeedMessage.encode(msg).finish());
-            }
-            catch{
-              connections.splice(connections.indexOf(c), 1);
-            }
-          });
-        });
-      }
-      //res.contentType("application/x-google-protobuf");
-      //res.end(msg.encode().toBuffer(), 'binary');
-      res.status(200).end();
+      c.send(encoded);
     }
-    catch (e) {
-      next(e);
+    catch{
+      connections.splice(connections.indexOf(c), 1);
     }
+  });
+});
+
+app.get('/plan', async (req, res, next) => {
+  try {
+    let route = await otpProxy.getRoute(url.parse(req.url).query);
+    res.send(route);
+    res.status(200).end();
   }
-  else {
-    res.status(404).end();
+  catch (e) {
+    next(e);
   }
 });
 
