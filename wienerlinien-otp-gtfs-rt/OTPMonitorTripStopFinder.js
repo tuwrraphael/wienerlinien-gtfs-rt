@@ -62,6 +62,22 @@ class OTPMonitorTripStopFinder {
         return stopTime;
     }
 
+    cleanName(name) {
+        return name
+            .toLowerCase()
+            .replace(/\s\(?(u|s)\)?(\s|$)/, "")
+            .split(/,|.|\s/)
+            .filter(s => "" != s);
+    }
+
+    stationNameMatch(name1, name2) {
+        let names1 = this.cleanName(name1);
+        let names2 = this.cleanName(name2);
+        let smallerGroup = names1.length < names2.length ? names1 : names2;
+        let largerGroup = smallerGroup == names1 ? names2 : names1;
+        return !smallerGroup.some(word => !largerGroup.some(word2, levenshtein(word, word2) < (MAX_DIRECTION_EDIT_DISTANCE + 1)));
+    }
+
     async findTripsInPattern(departures, line, monitor, patternId) {
         if (!departures.length) {
             return null;
@@ -73,17 +89,18 @@ class OTPMonitorTripStopFinder {
             return null;
         }
         let lastStop = pattern.stops[pattern.stops.length - 1];
-        if (levenshtein(lastStop.name.toLowerCase(), line.towards.toLowerCase()) > MAX_DIRECTION_EDIT_DISTANCE) {
+        if (!this.stationNameMatch(lastStop.name, line.towards) > MAX_DIRECTION_EDIT_DISTANCE) {
             return null;
         }
+        let self = this;
         let stopsWithDistance = pattern.stops.map(s => {
             return {
                 s: s,
                 distance: distance([s.lon, s.lat], [monitor.locationStop.geometry.coordinates[0], monitor.locationStop.geometry.coordinates[1]]),
-                nameDistance: levenshtein(monitor.locationStop.properties.title.toLowerCase(), s.name.toLowerCase())
+                nameMatch: self.stationNameMatch(monitor.locationStop.properties.title, s.name)
             };
         });
-        let plausibleStops = stopsWithDistance.filter(p => p.distance < 1 && p.nameDistance < 6);
+        let plausibleStops = stopsWithDistance.filter(p => p.distance < 1 && p.nameMatch);
         if (plausibleStops.length == 0) {
             return null;
         }
