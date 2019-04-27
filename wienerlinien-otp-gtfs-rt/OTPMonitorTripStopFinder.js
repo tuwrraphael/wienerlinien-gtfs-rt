@@ -40,11 +40,15 @@ class OTPMonitorTripStopFinder {
     }
 
     startOfTodayInTimezone() {
-        let nowInTimeZone = getZonedTime(new Date, this.timezone);
-        nowInTimeZone.hours = 0;
-        nowInTimeZone.minutes = 0;
-        nowInTimeZone.seconds = 0;
-        return new Date(getUnixTime(nowInTimeZone, this.timezone));
+        let nowInTimeZone = getZonedTime(new Date(), this.timezone);
+        return new Date(getUnixTime({
+            year: nowInTimeZone.year,
+            month: nowInTimeZone.month,
+            day: nowInTimeZone.day,
+            hours: 0,
+            minutes: 0,
+            seconds: 0
+        }, this.timezone));
     }
 
     findClosestStoptime(stopTimes, departureTime) {
