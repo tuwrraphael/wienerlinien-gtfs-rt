@@ -23,5 +23,6 @@ module.exports = {
         ...wlOptions
     },
     websocketPort: 3003,
-    optProxyPort: 3002
+    optProxyPort: 3002,
+    proxyAllOtpCalls : true
 };

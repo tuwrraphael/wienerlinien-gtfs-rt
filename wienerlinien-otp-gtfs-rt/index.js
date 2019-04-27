@@ -2,6 +2,7 @@ const GtfsRealtimeBindings = require('gtfs-realtime-bindings').transit_realtime;
 const express = require('express');
 const OTPProxy = require("./OTPProxy");
 const WebSocket = require('ws');
+const proxy = require('express-http-proxy');
 const url = require("url");
 
 const settings = require("./settings");
@@ -23,7 +24,7 @@ let otpProxy = new OTPProxy(settings.options, function (feedMessage) {
   });
 });
 
-app.get('/plan', async (req, res, next) => {
+app.get('/otp/routers/default/plan', async (req, res, next) => {
   try {
     let route = await otpProxy.getRoute(url.parse(req.url).query);
     res.send(route);
@@ -33,6 +34,9 @@ app.get('/plan', async (req, res, next) => {
     next(e);
   }
 });
+if (settings.proxyAllOtpCalls) {
+  app.use('/', proxy(settings.options.baseUrl));
+}
 
 app.listen(settings.optProxyPort);
 
