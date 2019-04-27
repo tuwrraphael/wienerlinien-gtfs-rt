@@ -71,9 +71,12 @@ class MonitorTripUpdateConverter {
             if (delay < 0) {
                 adjustNonIncreasingIfEarly = delay / (lastRtStopTimeIndex);
             }
-            for (let i = 0; i < lastRtStopTimeIndex; i++) {
+            for (let i = lastRtStopTimeIndex-1; i >=0; i--) {
                 let stopTime = stopTimes[i];
-                updates[stopTime.stopId] = new Date(+stopTime.scheduledDeparture + adjustNonIncreasingIfEarly);
+                let maxAdjust = stopTime.scheduledDeparture - stopTimes[i+1].scheduledDeparture;
+                let adjust = Math.max(maxAdjust, delay/(i+1));
+                delay -= adjust;
+                updates[stopTime.stopId] = new Date(+stopTime.scheduledDeparture + adjust);
             }
         }
         return stopTimes.map(s => { return { stopId: s.stopId, time: updates[s.stopId] }; });
