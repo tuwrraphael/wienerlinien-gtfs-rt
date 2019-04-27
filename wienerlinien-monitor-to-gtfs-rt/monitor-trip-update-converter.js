@@ -51,7 +51,7 @@ class MonitorTripUpdateConverter {
                 let delayDecrease = (delay - lastDelay) / (lastRtStopTimeIndex - stopTimeIndex);
                 if (delayDecrease < 0) {
                     // updates of the following stop seem implausible: clear
-                    updates = []; 
+                    updates = [];
                 }
                 delay -= delayDecrease;
             }
@@ -67,15 +67,15 @@ class MonitorTripUpdateConverter {
             lastRtStopTimeIndex = stopTimeIndex;
         }
         if (lastRtStopTimeIndex > 0) {
-            let adjustNonIncreasingIfEarly = 0;
-            if (delay < 0) {
-                adjustNonIncreasingIfEarly = delay / (lastRtStopTimeIndex);
-            }
-            for (let i = lastRtStopTimeIndex-1; i >=0; i--) {
+            for (let i = lastRtStopTimeIndex - 1; i >= 0; i--) {
+                let adjust = 0;
                 let stopTime = stopTimes[i];
-                let maxAdjust = stopTime.scheduledDeparture - stopTimes[i+1].scheduledDeparture;
-                let adjust = Math.max(maxAdjust, delay/(i+1));
-                delay -= adjust;
+                if (delay < 0) {
+                    let timeAtFollowingStation = updates[stopTimes[i + 1].stopId];
+                    let minAdjust = timeAtFollowingStation - stopTime.scheduledDeparture;
+                    adjust = Math.min(minAdjust, delay / (i + 1));
+                    delay -= adjust;
+                }
                 updates[stopTime.stopId] = new Date(+stopTime.scheduledDeparture + adjust);
             }
         }
@@ -138,18 +138,18 @@ class MonitorTripUpdateConverter {
             let notFoundStop = rtStopTimes.find(v => !stoptimes.some(d => d.stopId == v.stop.id));
             if (notFoundStop) {
                 console.error(`stop ${notFoundStop.stop.id} does not belong to trip ${tripId}`);
-                break;
+                continue;
             }
             let getStopIndex = rt => stoptimes.find(s => s.stopId == rt.stop.id).stopIndex;
             rtStopTimes = rtStopTimes.sort((a, b) => getStopIndex(a) - getStopIndex(b));
             if (!this.checkIncreasing(rtStopTimes)) {
                 console.error(`rt stop times for trip ${tripId} are non increasing`);
-                break;
+                continue;
             }
             let updates = this.mergeUpdates(stoptimes, rtStopTimes);
             if (!this.checkUpdatesIncreasing(updates)) {
                 console.error(`updates times for trip ${tripId} are non increasing`);
-                break;
+                continue;
             }
             var u = {
                 trip: {
