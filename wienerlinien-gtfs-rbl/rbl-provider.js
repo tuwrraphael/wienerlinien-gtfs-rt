@@ -38,7 +38,7 @@ class RblProvider {
                     linie = linien[0];
                 }
             }
-            var steige = this.realtimeParser.steige.filter(v => v.linienId == linie.id && v.direction == trip.direction_id);
+            var steige = this.realtimeParser.steige.filter(v => v.linienId == linie.id);
             if (steige.length == 0) {
                 throw new Error("no steige found");
             }
