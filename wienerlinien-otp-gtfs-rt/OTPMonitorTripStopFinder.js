@@ -4,7 +4,7 @@ const addMinutes = require("date-fns/add_minutes");
 const format = require("date-fns/format");
 const distance = require("@turf/distance").default;
 const levenshtein = require('js-levenshtein');
-const { findTimeZone, getUnixTime } = require('timezone-support')
+const { findTimeZone, getUnixTime, getZonedTime } = require('timezone-support')
 
 const MAX_DIRECTION_EDIT_DISTANCE = 4;
 const OTP_MONITOR_PAST = 10;
@@ -40,15 +40,11 @@ class OTPMonitorTripStopFinder {
     }
 
     startOfTodayInTimezone() {
-        var today = new Date();
-        return new Date(getUnixTime({
-            year: today.getFullYear(),
-            month: today.getMonth() + 1,
-            day: today.getDate(),
-            hours: 0,
-            minutes: 0,
-            seconds: 0
-        }, this.timezone));
+        let nowInTimeZone = getZonedTime(new Date, this.timezone);
+        nowInTimeZone.hours = 0;
+        nowInTimeZone.minutes = 0;
+        nowInTimeZone.seconds = 0;
+        return new Date(getUnixTime(nowInTimeZone, this.timezone));
     }
 
     findClosestStoptime(stopTimes, departureTime) {
