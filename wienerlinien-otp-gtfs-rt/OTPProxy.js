@@ -3,7 +3,10 @@ const MonitorTripUpdateConverter = require("../wienerlinien-monitor-to-gtfs-rt")
 const RblProvider = require("../wienerlinien-gtfs-rbl");
 const OTPMonitorTripStopFinder = require("./OTPMonitorTripStopFinder");
 
+const RETRY_SECS = 30;
+
 class OTPProxy {
+
     constructor(options, updateCallback) {
         this.updateCallback = updateCallback;
         this.baseUrl = options.baseUrl;
@@ -11,8 +14,13 @@ class OTPProxy {
         this.APIKEY = options.wlApiKey;
         this.tripStopFinder = new OTPMonitorTripStopFinder(this.baseUrl, this.routerId, options.feedId);
         let self = this;
-        this.tripStopFinder.initialize()
-            .then(() => self.tripStopFinderInitialized = true, e => console.error("failed to initialize OTPMonitorTripStopFinder", e));
+        function init() {
+            self.tripStopFinder.initialize()
+                .then(() => self.tripStopFinderInitialized = true, e => {
+                    console.error("failed to initialize OTPMonitorTripStopFinder, retry in " + RETRY_SECS, e);
+                    setTimeout(init, RETRY_SECS);
+                });
+        }
 
         this.converter = new MonitorTripUpdateConverter(this.tripStopFinder.findTrip, this.tripStopFinder.getStopTimesForTrip);
         this.rblProvider = new RblProvider();
