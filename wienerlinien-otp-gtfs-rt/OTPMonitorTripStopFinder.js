@@ -75,7 +75,7 @@ class OTPMonitorTripStopFinder {
         let names2 = this.cleanName(name2);
         let smallerGroup = names1.length < names2.length ? names1 : names2;
         let largerGroup = smallerGroup == names1 ? names2 : names1;
-        return !smallerGroup.some(word => !largerGroup.some(word2, levenshtein(word, word2) < (MAX_DIRECTION_EDIT_DISTANCE + 1)));
+        return !smallerGroup.some(word => !largerGroup.some(word2 => levenshtein(word, word2) < (MAX_DIRECTION_EDIT_DISTANCE + 1)));
     }
 
     async findTripsInPattern(departures, line, monitor, patternId) {
@@ -191,6 +191,10 @@ class OTPMonitorTripStopFinder {
                 });
             }
         }
+        result.forEach(r => {
+            let rtdep = new Date(r.departure.departureTime.timeReal || r.departure.departureTime.timePlanned);
+            console.log(`Trip ${r.closestStopTime.stopTime.tripId}/${r.closestStopTime.scheduleDistance}; line ${line.name}:${line.towards}, at ${r.stop.name}: ${format(rtdep, "HH:mm:ss")}`);
+        });
         return result.map(r => {
             return {
                 departure: r.departure,
