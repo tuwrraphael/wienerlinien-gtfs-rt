@@ -2,7 +2,6 @@ class MonitorTripUpdateConverter {
     constructor(findTripsFromMonitorInfo, getStopTimesForTrip) {
         this.findTripsFromMonitorInfo = findTripsFromMonitorInfo;
         this.getStopTimesForTrip = getStopTimesForTrip;
-        this.pastUpdates = {};
     }
 
     groupBy(xs, key) {
@@ -38,10 +37,8 @@ class MonitorTripUpdateConverter {
 
     mergeUpdates(stopTimes, rtStopTimes) {
         let updates = {};
-        let lastRtStopTime = null;
-        let lastStopTime = null;
         let lastRtStopTimeIndex = null;
-        let delay = null;
+        let delay, lastDelay = null;
         for (let i = rtStopTimes.length - 1; i >= 0; i--) {
             let rtStopTime = rtStopTimes[i];
             let stopTime = stopTimes.find(s => rtStopTime.stop.id == s.stopId);
@@ -50,10 +47,13 @@ class MonitorTripUpdateConverter {
             delay = +rtStopTime.realtimeDeparture - +stopTime.scheduledDeparture;
             let following = stopTimes.filter((s, j) => j > stopTimeIndex);
             // adujst the delay to prevent non increasing stoptimes
-            if (delay > 0 && null != lastRtStopTime) {
-                let totalDelay = (+lastRtStopTime.realtimeDeparture - +rtStopTime.realtimeDeparture)
-                    - (+lastStopTime.scheduledDeparture - +stopTime.scheduledDeparture);
-                delay = Math.max(delay, totalDelay / (lastRtStopTimeIndex - stopTimeIndex));
+            if (delay > 0 && null != lastDelay && lastDelay < delay) {
+                let delayDecrease = (delay - lastDelay) / (lastRtStopTimeIndex - stopTimeIndex);
+                if (delayDecrease < 0) {
+                    // updates of the following stop seem implausible: clear
+                    updates = []; 
+                }
+                delay -= delayDecrease;
             }
             for (let followingStopTime of following) {
                 if (null != updates[followingStopTime.stopId]) {
@@ -63,8 +63,7 @@ class MonitorTripUpdateConverter {
                     updates[followingStopTime.stopId] = new Date(+followingStopTime.scheduledDeparture + delay);
                 }
             }
-            lastRtStopTime = rtStopTime;
-            lastStopTime = stopTime;
+            lastDelay = delay;
             lastRtStopTimeIndex = stopTimeIndex;
         }
         if (lastRtStopTimeIndex > 0) {
@@ -125,8 +124,7 @@ class MonitorTripUpdateConverter {
         var trip_updates = [];
         let trips = this.groupBy(matchingTrips, "tripId");
         for (let tripId in trips) {
-            let otherPastUpdates = (this.pastUpdates[tripId] || []).filter(p => !trips[tripId].some(s => s.stop.id == p.stop.id));
-            let tripUpdates = [...new Set([...trips[tripId], ...otherPastUpdates])];
+            let tripUpdates = trips[tripId];
             let stoptimes = await this.getStopTimesForTrip(tripId);
             var rtStopTimes = tripUpdates.map(rt => {
                 return {
@@ -147,7 +145,7 @@ class MonitorTripUpdateConverter {
             }
             let updates = this.mergeUpdates(stoptimes, rtStopTimes);
             if (!this.checkUpdatesIncreasing(updates)) {
-                console.error(`rt stop times for trip ${tripId} are non increasing`);
+                console.error(`updates times for trip ${tripId} are non increasing`);
                 break;
             }
             var u = {
@@ -170,7 +168,6 @@ class MonitorTripUpdateConverter {
                 })
             }
             trip_updates.push(u);
-            this.pastUpdates[tripId] = tripUpdates;
         }
         return trip_updates;
     }
