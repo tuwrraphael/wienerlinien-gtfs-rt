@@ -65,16 +65,19 @@ class OTPProxy {
             return initialRoute;
         }
         let rbls = this.rblsForRoute(initialRoute);
-        var monres = await fetch(`https://www.wienerlinien.at/ogd_realtime/monitor?rbl=${rbls.join("&rbl=")}&sender=${this.APIKEY}`);
-        var monitor = await monres.json();
-        try {
-            var updates = await this.converter.getTripUpdates(monitor);
+        let updates = null;
+        if (rbls.length) {
+            var monres = await fetch(`https://www.wienerlinien.at/ogd_realtime/monitor?rbl=${rbls.join("&rbl=")}&sender=${this.APIKEY}`);
+            var monitor = await monres.json();
+            try {
+                updates = await this.converter.getTripUpdates(monitor);
+            }
+            catch (e) {
+                console.error(e);
+                return initialRoute;
+            }
         }
-        catch (e) {
-            console.error(e);
-            return initialRoute;
-        }
-        if (updates.length) {
+        if (updates && updates.length) {
             let self = this;
             updates.forEach(u => {
                 var msg = {
@@ -106,6 +109,9 @@ class OTPProxy {
             await this.delay(1000);
             let refreshedRoute = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/plan?${query}`)).json();
             return refreshedRoute;
+        }
+        else {
+            return initialRoute;
         }
     }
 
