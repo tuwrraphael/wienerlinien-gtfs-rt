@@ -129,7 +129,9 @@ class OTPMonitorTripStopFinder {
                     closestStopTime: closestStopTime,
                     closestExclusiveStopTime: closestExclusiveStopTime
                 });
-                splicedStoptimes.splice(0, splicedStoptimes.indexOf(closestExclusiveStopTime.stopTime) + 1);
+                if (null != closestExclusiveStopTime) {
+                    splicedStoptimes.splice(0, splicedStoptimes.indexOf(closestExclusiveStopTime.stopTime) + 1);
+                }
             }
         }
         return results;
@@ -180,7 +182,8 @@ class OTPMonitorTripStopFinder {
                     c.matches.forEach(m => {
                         if (m != bestCandidate && // dont change the candidate
                             bestCandidate.closestStopTime.stopTime.tripId == m.closestStopTime.stopTime.tripId) {
-                            if (m.closestExclusiveStopTime.stopTime.tripId != bestCandidate.closestStopTime.stopTime.tripId) {
+                            if (null != m.closestExclusiveStopTime
+                                && m.closestExclusiveStopTime.stopTime.tripId != bestCandidate.closestStopTime.stopTime.tripId) {
                                 m.closestStopTime = m.closestExclusiveStopTime;
                             }
                         }
