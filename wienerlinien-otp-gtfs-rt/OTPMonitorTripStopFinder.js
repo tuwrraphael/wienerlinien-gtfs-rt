@@ -155,6 +155,7 @@ class OTPMonitorTripStopFinder {
     }
 
     async findTrip(departures, line, monitor) {
+        this.monitors = {};
         if (!this.initialized || !monitor.locationStop || !monitor.locationStop.geometry) {
             return null;
         }
