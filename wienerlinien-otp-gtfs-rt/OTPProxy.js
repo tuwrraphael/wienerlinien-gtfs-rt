@@ -36,15 +36,25 @@ class OTPProxy {
             for (let leg of itinerary.legs) {
                 if (leg.tripId) {
                     if (leg.from && leg.from.stopId) {
-                        let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(/^1:/, ""), leg.from.stopId.replace(/^1:/, ""));
-                        if (rblInfo) {
-                            rbls.push(rblInfo.rbl);
+                        try {
+                            let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(/^1:/, ""), leg.from.stopId.replace(/^1:/, ""));
+                            if (rblInfo) {
+                                rbls.push(rblInfo.rbl);
+                            }
+                        }
+                        catch (e) {
+                            console.error(e);
                         }
                     }
                     if (leg.to && leg.to.stopId) {
-                        let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(/^1:/, ""), leg.to.stopId.replace(/^1:/, ""));
-                        if (rblInfo) {
-                            rbls.push(rblInfo.rbl);
+                        try {
+                            let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(/^1:/, ""), leg.to.stopId.replace(/^1:/, ""));
+                            if (rblInfo) {
+                                rbls.push(rblInfo.rbl);
+                            }
+                        }
+                        catch (e) {
+                            console.error(e);
                         }
                     }
                 }
