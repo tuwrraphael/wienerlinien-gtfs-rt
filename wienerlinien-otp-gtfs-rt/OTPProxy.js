@@ -12,6 +12,8 @@ class OTPProxy {
         this.baseUrl = options.baseUrl;
         this.routerId = options.routerId;
         this.APIKEY = options.wlApiKey;
+        this.feedId = options.feedId;
+        this.cleanRegex = new RegExp("^"+this.feedId+":");
         this.tripStopFinder = new OTPMonitorTripStopFinder(this.baseUrl, this.routerId, options.feedId);
         let self = this;
         function init() {
@@ -37,7 +39,7 @@ class OTPProxy {
                 if (leg.tripId) {
                     if (leg.from && leg.from.stopId) {
                         try {
-                            let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(/^1:/, ""), leg.from.stopId.replace(/^1:/, ""));
+                            let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(this.cleanRegex, ""), leg.from.stopId.replace(this.cleanRegex, ""));
                             if (rblInfo) {
                                 rbls.push(rblInfo.rbl);
                             }
@@ -48,7 +50,7 @@ class OTPProxy {
                     }
                     if (leg.to && leg.to.stopId) {
                         try {
-                            let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(/^1:/, ""), leg.to.stopId.replace(/^1:/, ""));
+                            let rblInfo = this.rblProvider.rblInfo(leg.tripId.replace(this.cleanRegex, ""), leg.to.stopId.replace(this.cleanRegex, ""));
                             if (rblInfo) {
                                 rbls.push(rblInfo.rbl);
                             }
@@ -102,12 +104,12 @@ class OTPProxy {
                             ...u,
                             trip: {
                                 ...u.trip,
-                                tripId: u.trip.tripId.replace(/^1:/, "")
+                                tripId: u.trip.tripId.replace(this.cleanRegex, "")
                             },
                             stopTimeUpdate: u.stopTimeUpdate.map(s => {
                                 return {
                                     ...s,
-                                    stopId: s.stopId.replace(/^1:/, "")
+                                    stopId: s.stopId.replace(this.cleanRegex, "")
                                 };
                             })
                         }
