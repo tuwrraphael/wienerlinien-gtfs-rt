@@ -2,6 +2,9 @@
 In the following I explain my findings when I combined [OpenTripPlanner](https://github.com/opentripplanner/OpenTripPlanner) with data from [OpenStreetMap](https://openstreetmap.org/), the [Wiener Linien Timetable](https://www.data.gv.at/katalog/dataset/wiener-linien-fahrplandaten-gtfs-wien) in [GTFS](https://developers.google.com/transit/gtfs/)-format and the [Wiener Linien Realtime Data](https://www.data.gv.at/katalog/dataset/stadt-wien_wienerlinienechtzeitdaten) API to create a realtime enabled public transport router for Vienna.
 Briefly  I set up an OpenTripPlanner instance and provide a small service wich consumes the Wiener Linien Realtime API and provides it in [GTFS](https://developers.google.com/transit/gtfs-realtime/)-RT format to OTP.
 
+## Result
+![Sample trip planned with proxied OpenTripPlanner](doc/44_71.png)
+
 ## Motivation
 For my time-assistant/smartwatch project [digit](https://github.com/tuwrraphael/digit-service) I needed a routing component. During prototyping I used the [Google Maps](https://cloud.google.com/maps-platform/?hl=en) API, but I chose to host my own router for the following reasons:
 - Google Maps does not incorporate realtime data of Wiener Linien. This is mainly because they only accept the realtime data in the [GTFS-RT](https://developers.google.com/transit/gtfs-realtime/) format. Wiener Linien provides currently just the static GTFS data as also stated in this [article](https://derstandard.at/2000063018441/Wiener-Linien-bei-Google-Keine-Echtzeitdaten-und-andere-Baustellen).
@@ -50,7 +53,12 @@ TODO detailed description, packages, usage...
 ### OTP cannot handle incomplete updates
 When OTP receives stoptime updates for a stop of a trip, it calculates the delay and propagates it to the following stops, assuming that if a vehicle is delayed X minutes at a specific stop, it will also be X minutes late at the following stops.
 However, as it can't infer realtime data for the stops before, unfourtunately it does not just leave the schedule of those stops untouched, but sets the arrival/departure time to -1. This is a problem as these stops are considered invalid while planning.
-This issue is also discussed [here](https://github.com/opentripplanner/OpenTripPlanner/issues/2295) and the is an yet unmerged [PR](https://github.com/opentripplanner/OpenTripPlanner/pull/2297), which fixes this behaviour.
-OTP must be manually built to apply it at the moment.
+This issue is also discussed [here](https://github.com/opentripplanner/OpenTripPlanner/issues/2295)~~and there is an yet unmerged [PR](https://github.com/opentripplanner/OpenTripPlanner/pull/2297), which fixes this behaviour.
+OTP must be manually built to apply it at the moment~~.
+
+It turned out simply not touching the stops prior to the first stop with known realtime data is not the solution, as this will lead to non increasing times on the timetable if the vehicle was early. Instead now, the TripUpdate always contains a StopTimeUpdate for each stop of a trip. The algorithm infers the missing stoptimes by
+- propagating delays to following stops
+- linearily increasing/decreasing delays on stops between stops with known, but different delays
+- dividing a negative delay (vehicle is early) evenly to preceeding stops, from the first stop with realtime data to the trip start
 ### OTP Websocket protobuf crashes on multiple TripUpdate Feed-Entities
 In my implementation, each websocket transmitted FeedMessage only contains one entity. The GTFS-RT standard specifies multiple are supported. I validated the resulting protobuf successfully using the [gtfs-realtime-validator](https://github.com/CUTR-at-USF/gtfs-realtime-validator) but unfourniately it was not accepted by the OTP deserializer.
