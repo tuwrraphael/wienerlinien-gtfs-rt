@@ -12,6 +12,6 @@
   "dependencies": {
     "@turf/distance": "^6.0.1",
     "bomstrip": "^0.1.4",
-    "csv-parser": "^2.2.0"
+    "csv-parser": "^2.3.0"
   }
 }
