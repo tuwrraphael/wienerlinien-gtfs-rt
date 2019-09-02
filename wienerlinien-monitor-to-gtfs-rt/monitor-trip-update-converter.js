@@ -35,9 +35,23 @@ class MonitorTripUpdateConverter {
         return lines;
     }
 
+    driveDistribution(startTime, followingStopList) {
+        if (!followingStopList.length) {
+            return [];
+        }
+        let drives = [];
+        for (let stop of followingStopList) {
+            drives.push(stop.scheduledDeparture - startTime);
+            startTime = stop.scheduledDeparture;
+        }
+        let totalTime = drives.reduce((a, b) => a + b, 0);
+        return drives.map(d => d / totalTime);
+    }
+
     mergeUpdates(stopTimes, rtStopTimes) {
         let updates = {};
         let lastRtStopTimeIndex = null;
+        let lastRtStopTime = null;
         let delay, lastDelay = null;
         for (let i = rtStopTimes.length - 1; i >= 0; i--) {
             let rtStopTime = rtStopTimes[i];
@@ -46,22 +60,32 @@ class MonitorTripUpdateConverter {
             updates[rtStopTime.stop.id] = rtStopTime.realtimeDeparture;
             delay = +rtStopTime.realtimeDeparture - +stopTime.scheduledDeparture;
             let following = stopTimes.filter((s, j) => j > stopTimeIndex);
-            // adujst the delay to prevent non increasing stoptimes
-            let delayDecrease = 0;
-            if (null != lastDelay && lastDelay < delay) {
-                delayDecrease = (delay - lastDelay) / (lastRtStopTimeIndex - stopTimeIndex);
-            }
-            for (let followingStopTime of following) {
-                delay -= delayDecrease;
-                if (null != updates[followingStopTime.stopId]) {
-                    break;
+            if (null == lastRtStopTime) {
+                for (let followingStopTime of following) {
+                    if (null != updates[followingStopTime.stopId]) {
+                        break;
+                    } else {
+                        updates[followingStopTime.stopId] = new Date(+followingStopTime.scheduledDeparture + delay);
+                    }
                 }
-                else {
-                    updates[followingStopTime.stopId] = new Date(+followingStopTime.scheduledDeparture + delay);
+            }
+            else {
+                let totalDriveTime = lastRtStopTime - rtStopTime.realtimeDeparture;
+                let dist = this.driveDistribution(stopTime.scheduledDeparture, following);
+                let time = +rtStopTime.realtimeDeparture;
+                for (let j = 0; j < following.length; j++) {
+                    let followingStopTime = following[j];
+                    time += dist[j] * totalDriveTime;
+                    if (null != updates[followingStopTime.stopId]) {
+                        break;
+                    } else {
+                        updates[followingStopTime.stopId] = new Date(time);
+                    }
                 }
             }
             lastDelay = delay;
             lastRtStopTimeIndex = stopTimeIndex;
+            lastRtStopTime = rtStopTime.realtimeDeparture;
         }
         if (lastRtStopTimeIndex > 0) {
             for (let i = lastRtStopTimeIndex - 1; i >= 0; i--) {
