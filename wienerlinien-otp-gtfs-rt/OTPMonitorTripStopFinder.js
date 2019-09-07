@@ -89,7 +89,7 @@ class OTPMonitorTripStopFinder {
             return null;
         }
         let lastStop = pattern.stops[pattern.stops.length - 1];
-        if (!this.stationNameMatch(lastStop.name, line.towards) > MAX_DIRECTION_EDIT_DISTANCE) {
+        if (!this.stationNameMatch(lastStop.name, line.towards)) {
             return null;
         }
         let self = this;
@@ -114,7 +114,7 @@ class OTPMonitorTripStopFinder {
         let stopTimes = forPattern.times.map(t => {
             return {
                 ...t,
-                scheduled: (addSeconds(startOfTodayInGtfsTimezone, t.scheduledDeparture))
+                scheduled: (addSeconds(new Date(1000 * t.serviceDay), t.scheduledDeparture))
             };
         });
         let results = [];
@@ -199,6 +199,9 @@ class OTPMonitorTripStopFinder {
             let rtdep = new Date(r.departure.departureTime.timeReal || r.departure.departureTime.timePlanned);
             console.log(`Trip ${r.closestStopTime.stopTime.tripId}/${r.closestStopTime.scheduleDistance}; line ${line.name}:${line.towards}, at ${r.stop.name}: ${format(rtdep, "HH:mm:ss")}`);
         });
+        if (!result.length) {
+            console.log("could not match any for", departures, line, monitor);
+        }
         return result.map(r => {
             return {
                 departure: r.departure,
@@ -216,8 +219,8 @@ class OTPMonitorTripStopFinder {
         return stopTimes.map(t => {
             return {
                 ...t,
-                scheduledDeparture: (addSeconds(startOfTodayInGtfsTimezone, t.scheduledDeparture)),
-                realtimeDeparture: (addSeconds(startOfTodayInGtfsTimezone, t.realtimeDeparture))
+                scheduledDeparture: (addSeconds(new Date(1000 * t.serviceDay), t.scheduledDeparture)),
+                realtimeDeparture: (addSeconds(new Date(1000 * t.serviceDay), t.realtimeDeparture))
             };
         });
     }

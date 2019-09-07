@@ -42,4 +42,17 @@ describe('monitor to testupdate', function () {
         var increasing = c.checkUpdatesIncreasing(updates, test2.stoptimes);
         expect(increasing).to.be.true;
     });
+    it('test3', function () {
+        var test2 = require("./test3.json");
+        var c = new MonitorToTripUpdateConverter();
+        test2.stoptimes.forEach(s => {
+            s.scheduledDeparture = new Date(s.scheduledDeparture);
+        });
+        test2.rtStoptimes.forEach(s => {
+            s.realtimeDeparture = new Date(s.realtimeDeparture);
+        })
+        var updates = c.mergeUpdates(test2.stoptimes, test2.rtStoptimes);
+        var increasing = c.checkUpdatesIncreasing(updates, test2.stoptimes);
+        expect(increasing).to.be.true;
+    });
 });
