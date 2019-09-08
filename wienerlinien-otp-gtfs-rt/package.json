@@ -16,8 +16,10 @@
     "express-http-proxy": "^1.5.1",
     "gtfs-realtime-bindings": "0.0.5",
     "js-levenshtein": "^1.1.6",
+    "node-cache": "^4.2.1",
     "node-fetch": "^2.6.0",
     "timezone-support": "^1.8.1",
+    "uuid": "^3.3.3",
     "ws": "^6.2.1"
   }
 }

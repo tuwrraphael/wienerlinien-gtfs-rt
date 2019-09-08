@@ -26,14 +26,30 @@ let otpProxy = new OTPProxy(settings.options, function (feedMessage) {
 
 app.get('/otp/routers/default/plan', async (req, res, next) => {
   try {
-    let route = await otpProxy.getRoute(url.parse(req.url).query);
-    res.send(route);
+    let result = await otpProxy.getRoute(url.parse(req.url).query);
+    res.setHeader('ETag', `"${result.id}"`);
+    res.send(result.route);
     res.status(200).end();
   }
   catch (e) {
     next(e);
   }
 });
+
+app.post('/routes/:id/subscribe', async (req, res, next) => {
+  try {
+    let subscribed = otpProxy.subscribe(req.params.id, req.query.callback);
+    if (subscribed) {
+      res.status(201).end();
+    } else {
+      res.status(404).end();
+    }
+  }
+  catch (e) {
+    next(e);
+  }
+});
+
 if (settings.proxyAllOtpCalls) {
   app.use('/', proxy(settings.options.baseUrl));
 }
