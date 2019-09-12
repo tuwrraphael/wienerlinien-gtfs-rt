@@ -10,7 +10,7 @@ const addMinutes = require("date-fns/add_minutes");
 const RETRY_SECS = 30;
 const TTL_SECS = 15 * 60;
 const SUBSCRIPTION_PROCESS_INTERVAL_MS = 60000;
-const MIN_DIFF_MS = 30000;
+const MIN_DIFF_MS = 60000;
 
 class OTPProxy {
 
@@ -220,7 +220,9 @@ class OTPProxy {
             for (let update of possibleUpdates) {
                 let refreshedRoute = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/plan?${update.routeData.query}`)).json();
                 let comparison = compareRoute(update.routeData.route, refreshedRoute);
-                if (comparison.type == "DIFFERENT" || comparison.type == "TIMEDIFFERENCE" && comparison.t > MIN_DIFF_MS) {
+                if (comparison.type == "DIFFERENT" ||
+                    (comparison.type == "TIMEDIFFERENCES" && comparison.t.some(diff =>
+                        (diff.t > 5 * 60000) || (diff.t > MIN_DIFF_MS && diff.at < addMinutes(new Date(), 10))))) {
                     this.routeCache.set(update.subscription.id,
                         { ...update.routeData, route: refreshedRoute },
                         Math.round((+update.subscription.end - +new Date()) / 1000) + TTL_SECS);

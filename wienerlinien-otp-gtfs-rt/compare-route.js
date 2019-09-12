@@ -1,7 +1,10 @@
 const DIFFERENT = { type: "DIFFERENT" };
 const EQUAL = { type: "EQUAL" };
-const TIMEDIFFERENCE = function (t) {
-    return { type: "TIMEDIFFERENCE", t };
+const TIMEDIFFERENCE = function (t, at) {
+    return { type: "TIMEDIFFERENCE", t, at };
+}
+const TIMEDIFFERENCES = function (t) {
+    return { type: "TIMEDIFFERENCES", t };
 }
 
 function compareAndMerge(arr0, arr1, comparisonFn) {
@@ -9,19 +12,19 @@ function compareAndMerge(arr0, arr1, comparisonFn) {
         return DIFFERENT;
     }
     var comps = [];
+    var timedifferences = [];
     for (let i = 0; i < arr0.length; i++) {
         comps.push(comparisonFn(arr0[i], arr1[i]));
     }
     if (comps.some(l => l.type == DIFFERENT.type)) {
         return DIFFERENT;
     }
-    if (comps.some(l => l.type == TIMEDIFFERENCE(0).type)) {
-        return TIMEDIFFERENCE(
-            comps
-                .filter(v => v.type == TIMEDIFFERENCE(0).type)
-                .map(v => v.t)
-                .reduce((a, b) => Math.abs(a) + Math.abs(b), 0)
-        );
+    comps.filter(l => l.type == TIMEDIFFERENCES(0).type)
+        .forEach(l => l.t.forEach(d => timedifferences.push(d)));
+    comps.filter(l => l.type == TIMEDIFFERENCE(0).type)
+        .forEach(l => timedifferences.push(l));
+    if (timedifferences.length > 0) {
+        return TIMEDIFFERENCES(timedifferences);
     }
     return EQUAL;
 }
@@ -38,8 +41,15 @@ function compareLegs(l0, l1) {
     }
     var startTimeDiff = Math.abs(l0.startTime - l1.startTime);
     var endTimeDiff = Math.abs(l0.endTime - l1.endTime);
-    if (0 != startTimeDiff || 0 != endTimeDiff) {
-        return TIMEDIFFERENCE(Math.max(startTimeDiff, endTimeDiff));
+    var diffs = [];
+    if (0 != startTimeDiff) {
+        diffs.push(TIMEDIFFERENCE(startTimeDiff, new Date(l1.startTime)));
+    }
+    if (0 != endTimeDiff) {
+        diffs.push(TIMEDIFFERENCE(endTimeDiff, new Date(l1.endTime)));
+    }
+    if (diffs.length > 0) {
+        return TIMEDIFFERENCES(diffs);
     }
     return EQUAL;
 }
