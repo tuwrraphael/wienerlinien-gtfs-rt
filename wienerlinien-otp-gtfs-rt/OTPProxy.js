@@ -219,21 +219,21 @@ class OTPProxy {
             await this.delay(1000);
             for (let update of possibleUpdates) {
                 let refreshedRoute = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/plan?${update.routeData.query}`)).json();
-                let comparison = compareRoute(update.routeData.route, refreshedRoute);
-                if (comparison.type == "DIFFERENT" ||
-                    (comparison.type == "TIMEDIFFERENCES" && comparison.t.some(diff =>
+                let { overall, itineraries } = compareRoute(update.routeData.route, refreshedRoute);
+                if (overall.type == "DIFFERENT" ||
+                    (overall.type == "TIMEDIFFERENCES" && overall.t.some(diff =>
                         (diff.t > 5 * 60000) || (diff.t > MIN_DIFF_MS && diff.at < addMinutes(new Date(), 10))))) {
                     this.routeCache.set(update.subscription.id,
                         { ...update.routeData, route: refreshedRoute },
                         Math.round((+update.subscription.end - +new Date()) / 1000) + TTL_SECS);
+                    console.log(`${update.subscription.id} : ${overall.type}.`, itineraries);
                     await fetch(update.subscription.callbackUrl, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
                         },
-                        body: JSON.stringify(refreshedRoute)
+                        body: JSON.stringify({ ...refreshedRoute, itineraryChanges: itineraries })
                     });
-                    console.log(`Called ${update.subscription.callbackUrl} for update on ${update.subscription.id}`);
                 }
             }
         }

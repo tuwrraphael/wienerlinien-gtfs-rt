@@ -7,15 +7,8 @@ const TIMEDIFFERENCES = function (t) {
     return { type: "TIMEDIFFERENCES", t };
 }
 
-function compareAndMerge(arr0, arr1, comparisonFn) {
-    if (arr0.length != arr1.length) {
-        return DIFFERENT;
-    }
-    var comps = [];
+function merge(comps) {
     var timedifferences = [];
-    for (let i = 0; i < arr0.length; i++) {
-        comps.push(comparisonFn(arr0[i], arr1[i]));
-    }
     if (comps.some(l => l.type == DIFFERENT.type)) {
         return DIFFERENT;
     }
@@ -27,6 +20,17 @@ function compareAndMerge(arr0, arr1, comparisonFn) {
         return TIMEDIFFERENCES(timedifferences);
     }
     return EQUAL;
+}
+
+function compareAndMerge(arr0, arr1, comparisonFn) {
+    if (arr0.length != arr1.length) {
+        return DIFFERENT;
+    }
+    var comps = [];
+    for (let i = 0; i < arr0.length; i++) {
+        comps.push(comparisonFn(arr0[i], arr1[i]));
+    }
+    return merge(comps);
 }
 
 function compareLegs(l0, l1) {
@@ -54,13 +58,16 @@ function compareLegs(l0, l1) {
     return EQUAL;
 }
 
-function compareItinerary(it0, it1) {
-    return compareAndMerge(it0.legs, it1.legs, compareLegs);
-}
-
 module.exports = function (r0, r1) {
     if (r0.plan && !r1.plan || r1.plan && !r0.plan) {
-        return DIFFERENT;
+        return { overall: DIFFERENT };
     }
-    return compareAndMerge(r0.plan.itineraries, r1.plan.itineraries, compareItinerary);
+    if (r0.plan.itineraries.length != r1.plan.itineraries.length) {
+        return { overall: DIFFERENT };
+    }
+    let comps = r0.plan.itineraries.map((it0, idx) => compareAndMerge(it0.legs, r1.plan.itineraries[idx].legs, compareLegs));
+    return {
+        overall: merge(comps),
+        itineraries: comps
+    };
 }
