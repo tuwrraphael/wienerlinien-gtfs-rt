@@ -6,6 +6,7 @@ const compareRoute = require('./compare-route');
 const NodeCache = require("node-cache");
 const uuid = require("uuid/v4");
 const addMinutes = require("date-fns/add_minutes");
+const getActiveLeg = require("./get-active-leg");
 
 const RETRY_SECS = 30;
 const TTL_SECS = 15 * 60;
@@ -127,7 +128,7 @@ class OTPProxy {
                 self.updateCallback(msg);
             });
         }
-        return updates && updates.length;
+        return updates;
     }
 
     async getRoute(query) {
@@ -141,11 +142,11 @@ class OTPProxy {
             return initialRoute;
         }
         let rbls = this.rblsForRoute(initialRoute);
-        var updated = false;
+        var updates = false;
         if (rbls.length) {
-            updated = await this.updateOTP(rbls);
+            updates = await this.updateOTP(rbls);
         }
-        if (updated) {
+        if (updates && updates.length) {
             // we want to give the OTP time to process the messages
             await this.delay(1000);
             let refreshedRoute = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/plan?${query}`)).json();
@@ -211,14 +212,24 @@ class OTPProxy {
             .map(u => u.routeData.rbls)
             .reduce(function (a, b) { return a.concat(b); })
             .filter(onlyUnique);
-        let updated = await this.updateOTP(rbls);
-        if (!updated) {
+        let updates = await this.updateOTP(rbls);
+        if (!updates || !updates.length) {
             console.warn(`no updates for rbls ${rbls}`);
         }
         else {
             await this.delay(1000);
             for (let update of possibleUpdates) {
-                let refreshedRoute = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/plan?${update.routeData.query}`)).json();
+                for (let itinerary of update.routeData.route.plan) {
+                    let activeLeg = getActiveLeg(itinerary, new Date());
+                    if (null == activeLeg) {
+                         = await (await fetch(`${this.baseUrl}/otp/routers/${this.routerId}/plan?${update.routeData.query}`)).json();
+                    }
+                    else if (activeLeg.transitLeg) {
+
+                    }
+                }
+                
+
                 let comparison = compareRoute(update.routeData.route, refreshedRoute);
                 if (comparison.type == "DIFFERENT" ||
                     (comparison.type == "TIMEDIFFERENCES" && comparison.t.some(diff =>
